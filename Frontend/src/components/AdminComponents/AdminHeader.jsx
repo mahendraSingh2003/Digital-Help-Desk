@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function Header({ theme, setTheme }) {
+export default function AdminHeader({ theme, setTheme }) {
 
   const navigate = useNavigate();
 
@@ -13,7 +13,7 @@ export default function Header({ theme, setTheme }) {
 
       {/* TITLE */}
       <div className="text-lg font-semibold text-white">
-        Digital Help Desk
+        Admin Panel
       </div>
 
       <div className="flex gap-4">
@@ -43,7 +43,6 @@ export default function Header({ theme, setTheme }) {
                 </div>
 
                 <div>Email</div>
-                <div>Daily Limit</div>
 
                 <div className="cursor-pointer hover:text-red-400">
                   Logout
@@ -75,24 +74,22 @@ export default function Header({ theme, setTheme }) {
                   onClick={() => navigate("/settings")}
                   className="cursor-pointer hover:text-green-400"
                 >
-                  Q/A Interface
+                  Q/A Requests
                 </div>
 
+                <div
+                  onClick={() => navigate("/Knowledgebase")}
+                  className="cursor-pointer hover:text-green-400"
+                >
+                  Knowledgebase
+                </div>
                 <div
                   onClick={() => navigate("/appointment")}
                   className="cursor-pointer hover:text-green-400"
                 >
-                  Book Appointment
+                  Appointment Sec.
                 </div>
 
-                <hr className="border-gray-600 my-2" />
-
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="w-full border border-gray-500 rounded p-1"
-                >
-                  {theme === "dark" ? "🌞 Light Mode" : "🌙 Dark Mode"}
-                </button>
 
               </div>
             </div>

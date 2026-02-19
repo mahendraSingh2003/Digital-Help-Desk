@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import API from "../api";
+import API from "../../api";
 
 export default function AssistantMenu({ onClose, message }) {
   const ref = useRef();
