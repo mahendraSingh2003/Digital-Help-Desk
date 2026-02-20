@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
-import ChatArea from "../components/ChatArea";
-import ChatInput from "../components/ChatInput";
+import Sidebar from "../components/HomeComponents/Sidebar";
+import Header from "../components/HomeComponents/Header";
+import ChatArea from "../components/HomeComponents/ChatArea";
+import ChatInput from "../components/HomeComponents/ChatInput";
 import API from "../api";
 
 export default function Home() {

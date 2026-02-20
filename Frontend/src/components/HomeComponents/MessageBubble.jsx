@@ -9,7 +9,7 @@ import {
 
 
 import AssistantMenu from "./AssistantMenu";
-import API from "../api";
+import API from "../../api";
 
 export default function MessageBubble({ message }) {
     const [open, setOpen] = useState(false);
