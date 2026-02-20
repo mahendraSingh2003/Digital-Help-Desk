@@ -71,7 +71,7 @@ export default function AdminHeader({ theme, setTheme }) {
               <div className="bg-[#40414F] p-3 rounded space-y-1 min-w-[170px] text-white shadow-lg">
 
                 <div
-                  onClick={() => navigate("/settings")}
+                  onClick={() => navigate("/QaDashboard")}
                   className="cursor-pointer hover:text-green-400"
                 >
                   Q/A Requests
