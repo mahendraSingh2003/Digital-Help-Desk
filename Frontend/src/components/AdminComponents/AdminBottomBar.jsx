@@ -1,155 +1,277 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { HiOutlineMicrophone } from "react-icons/hi2";
 import API from "../../api";
 
-export default function AdminBottomBar() {
+export default function AdminBottomBar({ refinedText, setRefinedText ,activeSession }) {
   const [loading, setLoading] = useState(null);
-
-  const [file, setFile] = useState(null);
-  const [refinedText, setRefinedText] = useState("");
 
   const [preprocessing, setPreprocessing] = useState(false);
   const [storing, setStoring] = useState(false);
 
+  const [recording, setRecording] = useState(false);
+  const [duration, setDuration] = useState(0);
+  // const [sessionName, setSessionName] = useState("");
+  const [file, setFile] = useState(null);
+
+
   const streamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
 
-  const [recording, setRecording] = useState(false);
+  const allChunksRef = useRef([]);
 
-  // 🎤 START MIC
-  const startRecording = async () => {
-    try {
+  const timerRef = useRef(null);
+
+  const [audioURL, setAudioURL] = useState(null);
+
+
+  /* ⏱ TIMER */
+  useEffect(() => {
+    if (recording) {
+      timerRef.current = setInterval(() => {
+        setDuration((d) => d + 1);
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+
+    return () => clearInterval(timerRef.current);
+  }, [recording]);
+
+  /* 🎤 TOGGLE RECORDING (pause/resume style) */
+  const toggleRecording = async () => {
+    if (!mediaRecorderRef.current) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          allChunksRef.current.push(e.data);
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/wav",
-        });
-
-        const audioFile = new File([audioBlob], "mic-audio.wav", {
-          type: "audio/wav",
-        });
-
-        setFile(audioFile);
-
-        // Close mic completely
-        streamRef.current.getTracks().forEach((track) => track.stop());
+          // live preview
+          const blob = new Blob(allChunksRef.current, { type: "audio/wav" });
+          setAudioURL(URL.createObjectURL(blob));
+        }
       };
 
       mediaRecorder.start();
       setRecording(true);
-    } catch (err) {
-      alert("Microphone access denied");
-    }
-  };
-
-  // ⏹ STOP MIC
-  const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
-    }
-  };
-
-  // 🚀 UPLOAD & PREPROCESS
-  const handleFileUpload = async () => {
-    if (!file) {
-      alert("Please record or select a file first");
       return;
     }
 
+    if (mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.pause();
+      setRecording(false);
+    } else if (mediaRecorderRef.current.state === "paused") {
+      mediaRecorderRef.current.resume();
+      setRecording(true);
+    }
+  };
+
+
+
+  /* 🚀 UPLOAD */
+  const handleFileUpload = async () => {
+    if (recording) return alert("Stop recording first");
+
+    if (!file && !allChunksRef.current.length) {
+      alert("Press Set/Reset Button First");
+      return;
+    }
+
+
     setPreprocessing(true);
 
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+
+
+    let uploadFile = file;
+
+    if (!uploadFile) {
+      const blob = new Blob(allChunksRef.current, { type: "audio/wav" });
+      uploadFile = new File([blob], `${activeSession.id}.wav`);
+    }
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", uploadFile);
+
 
     try {
-      const response = await API.post("/admin/preprocess", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const res = await API.post("/admin/preprocess", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      setRefinedText(response.data.original);
-    } catch (error) {
-      alert("Error preprocessing file");
+      setRefinedText(res.data.original);
+      setFile(null);
+
+      // new session starts fresh
+      allChunksRef.current = [];
+      setDuration(0);
+      setAudioURL(null);
+
+    } catch {
+      alert("Processing failed");
     } finally {
       setPreprocessing(false);
     }
   };
 
-  // 💾 SAVE TO KNOWLEDGE BASE
+  /* 💾 SAVE */
   const handleStore = async () => {
-    if (!refinedText) {
-      alert("No text to store");
-      return;
-    }
+    if (!refinedText) return alert("No text");
 
     setStoring(true);
     setLoading("save");
 
     try {
-      await API.post("/admin/confirm", { text: refinedText });
+      await API.post("/admin/confirm", {
+        text: refinedText
+      });
 
-      alert("Text stored successfully!");
       setRefinedText("");
-      setFile(null);
-    } catch (error) {
-      alert("Error storing text");
+      setSessionName("");
+
+      alert("Saved");
     } finally {
       setStoring(false);
       setLoading(null);
     }
   };
 
+  /* 🔁 RESET */
+  const handleReset = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+
+    allChunksRef.current = [];
+    setDuration(0);
+    setRefinedText("");
+    setAudioURL(null);
+    setFile(null);
+  };
+
+
+
+  /* 🕒 FORMAT */
+  const fmt = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(
+      2,
+      "0"
+    )}`;
+
   return (
     <div className="bg-[#303030] py-6 flex flex-col items-center gap-4">
 
+
+      {/* TIMER BADGE */}
+      <div className="text-sm text-green-400 ">{fmt(duration)}</div>
+      {/* Filename preview */}
+      {file && (
+        <span className="text-xs text-gray-400 truncate max-w-[130px]">
+          {file.name}
+        </span>
+      )}
+
+      {audioURL && (
+        <div className="w-full flex justify-center">
+          <audio
+            controls
+            src={audioURL}
+            className="w-[320px] h-8"
+          />
+        </div>
+      )}
+
+
       <div className="flex gap-4">
+        <div className="flex items-center gap-3">
 
-        {/* 🎤 MIC BUTTON */}
-        {!recording ? (
-          <button
-            onClick={startRecording}
-            className="bg-white px-5 py-2 rounded-full hover:bg-gray-200"
-          >
-            🎤 Start Mic
-          </button>
-        ) : (
-          <button
-            onClick={stopRecording}
-            className="bg-red-500 text-white px-5 py-2 rounded-full hover:bg-red-600"
-          >
-            ⏹ Stop Mic
-          </button>
-        )}
+          {/* Hidden native input */}
+          <input
+            type="file"
+            id="adminFile"
+            accept=".pdf,.mp3,.wav,.txt"
+            disabled={recording}
+            onChange={(e) => setFile(e.target.files[0])}
+            className="hidden"
+          />
 
-        {/* 🚀 UPLOAD BUTTON */}
+          {/* Styled upload button */}
+          <label
+            htmlFor="adminFile"
+            className={`flex items-center gap-2 px-6 h-12 rounded-full text-white transition-all
+  ${recording
+                ? "bg-[#2a2a2a] opacity-40 cursor-not-allowed"
+                : "bg-[#404045] hover:bg-[#4a4a50] cursor-pointer active:scale-95"
+              }`}
+          >
+            📁
+            <span>Select File</span>
+          </label>
+
+
+
+        </div>
+
+        {/* MIC */}
         <button
-          onClick={handleFileUpload}
-          disabled={preprocessing}
-          className="bg-white px-5 py-2 rounded-full hover:bg-gray-200 disabled:opacity-50"
+          onClick={toggleRecording}
+          className={`flex items-center gap-2 px-6 h-12 rounded-full text-white transition-all active:scale-95 ${recording
+            ? "bg-red-500 hover:bg-red-600 shadow-lg"
+            : "bg-[#404045] hover:bg-[#4a4a50]"
+            }`}
         >
-          {preprocessing ? "Processing..." : "🚀 Upload & Process"}
+          <HiOutlineMicrophone size={22} />
+          {recording ? "Pause" : "Record"}
         </button>
+
+        {/* UPLOAD */}
+        <button
+          disabled={preprocessing || recording}
+          onClick={handleFileUpload}
+          className={`px-6 h-12 rounded-full text-white transition
+  ${recording
+              ? "bg-[#2a2a2a] opacity-40 cursor-not-allowed"
+              : "bg-[#404045] hover:bg-[#4a4a50]"
+            }`}
+        >
+          {preprocessing ? "Processing..." : "Upload/Process"}
+        </button>
+
+
+        {/* RESET */}
+        <button
+          disabled={recording}
+          onClick={handleReset}
+          className={`px-6 h-12 rounded-full text-white transition
+  ${recording
+              ? "bg-[#2a2a2a] opacity-40 cursor-not-allowed"
+              : "bg-[#505055] hover:bg-[#5a5a60]"
+            }`}
+        >
+          Set/Reset
+        </button>
+
       </div>
 
-      {/* 💾 SAVE BUTTON */}
+      {/* SAVE */}
       <button
-           onClick={handleStore}
-          disabled={preprocessing}
-          className="bg-white px-5 py-2 rounded-full hover:bg-gray-200 disabled:opacity-50"
-        >
-          {preprocessing ? "Processing..." : "SAVE TO KNOWLEDGEBASE"}
-        </button>
+        onClick={handleStore}
+        disabled={storing || recording}
+        className={`px-10 h-12 rounded-full text-white transition
+  ${recording
+            ? "bg-[#2a2a2a] opacity-40 cursor-not-allowed"
+            : "bg-[#505055] hover:bg-[#5a5a60]"
+          }`}
+      >
+        {storing ? "Saving..." : "Save to Knowledgebase"}
+      </button>
+
     </div>
   );
 }
-
