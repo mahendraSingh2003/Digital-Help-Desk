@@ -97,7 +97,7 @@ export default function KnowledgeBase() {
     return (
         <div className="h-screen flex flex-col bg-[#303030]">
             {/* HEADER */}
-            <div className="h-14 flex items-center justify-between px-6 border-b border-gray-700">
+            <div className="h-11 flex items-center justify-between px-6 border-b border-gray-700">
 
                 {/* Back to Home */}
                 <button

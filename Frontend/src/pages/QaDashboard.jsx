@@ -157,7 +157,7 @@ export default function QaDashboard() {
     return (
         <div className="h-screen flex flex-col bg-[#303030] text-white overflow-hidden">
             {/* HEADER */}
-            <div className="h-14 flex items-center justify-between px-6 border-b border-gray-700 bg-[#303030] sticky top-0 z-50">
+            <div className="h-11 flex items-center justify-between px-6 border-b border-gray-700 bg-[#303030] sticky top-0 z-50">
 
                 {/* Back to Home */}
                 < button
@@ -170,7 +170,7 @@ export default function QaDashboard() {
 
                 {/* Title */}
                 < div className="text-lg font-semibold flex gap-2  items-center text-gray-100" >
-                    Q/A Answers
+                    Q/A Dashboard
                 </div >
 
                 {/* Spacer for center alignment */}
@@ -295,6 +295,12 @@ export default function QaDashboard() {
                                 className="bg-gray-600 px-4 py-2 rounded"
                             >
                                 Human Reply
+                            </button>
+                            <button
+                                onClick={() => setMode("makepublic")}
+                                className="bg-gray-600 px-4 py-2 rounded"
+                            >
+                                Make Public
                             </button>
 
                             <button
