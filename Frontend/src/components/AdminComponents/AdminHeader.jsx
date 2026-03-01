@@ -2,11 +2,24 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function AdminHeader({ theme, setTheme }) {
-
   const navigate = useNavigate();
 
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // demo admin info (replace with real data if needed)
+  const adminName = "Admin";
+  const adminEmail = "admin@gmail.com";
+
+  // LOGOUT FUNCTION
+  const handleLogout = () => {
+    localStorage.removeItem("token"); // remove auth token
+    localStorage.removeItem("admin"); // optional
+
+    setShowProfile(false);
+
+    navigate("/login"); // redirect to login page
+  };
 
   return (
     <div className="flex justify-between p-4 border-b border-gray-700 relative">
@@ -33,20 +46,27 @@ export default function AdminHeader({ theme, setTheme }) {
 
           {showProfile && (
             <div className="absolute right-0 top-full pt-2 z-50">
-              <div className="bg-[#40414F] p-3 rounded space-y-1 min-w-[150px] text-white shadow-lg">
+              <div className="bg-[#40414F] p-3 rounded min-w-[200px] text-white shadow-lg space-y-2">
 
-                <div
-                  onClick={() => navigate("/profile")}
-                  className="cursor-pointer hover:text-green-400"
+                {/* ADMIN NAME */}
+                <div className="font-semibold text-sm">
+                  {adminName}
+                </div>
+
+                {/* EMAIL */}
+                <div className="text-xs text-gray-300">
+                  {adminEmail}
+                </div>
+
+                <hr className="border-gray-600" />
+
+                {/* LOGOUT BUTTON */}
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left text-red-400 hover:text-red-500"
                 >
-                  Profile
-                </div>
-
-                <div>Email</div>
-
-                <div className="cursor-pointer hover:text-red-400">
                   Logout
-                </div>
+                </button>
 
               </div>
             </div>
@@ -68,7 +88,7 @@ export default function AdminHeader({ theme, setTheme }) {
 
           {showSettings && (
             <div className="absolute right-0 top-full pt-2 z-50">
-              <div className="bg-[#40414F] p-3 rounded space-y-1 min-w-[170px] text-white shadow-lg">
+              <div className="bg-[#40414F] p-3 rounded space-y-2 min-w-[170px] text-white shadow-lg">
 
                 <div
                   onClick={() => navigate("/QaDashboard")}
@@ -83,6 +103,7 @@ export default function AdminHeader({ theme, setTheme }) {
                 >
                   Knowledgebase
                 </div>
+
                 <div
                   onClick={() => navigate("/appointment")}
                   className="cursor-pointer hover:text-green-400"
@@ -90,14 +111,12 @@ export default function AdminHeader({ theme, setTheme }) {
                   Appointment Sec.
                 </div>
 
-
               </div>
             </div>
           )}
         </div>
 
       </div>
-
     </div>
   );
 }

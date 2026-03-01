@@ -11,9 +11,8 @@ export default function Sidebar({ open, setOpen, chats, newChat, loadChat }) {
 
   return (
     <div
-      className={`bg-[#1f2024] text-white ${
-        open ? "w-64" : "w-16"
-      } h-full p-3 flex flex-col justify-between transition-all duration-300`}
+      className={`bg-[#1f2024] text-white ${open ? "w-64" : "w-16"
+        } h-full p-3 flex flex-col justify-between transition-all duration-300`}
     >
       {/* TOP SECTION */}
       <div>
@@ -32,18 +31,18 @@ export default function Sidebar({ open, setOpen, chats, newChat, loadChat }) {
           className="border rounded p-2 w-full mb-3 hover:bg-[#40414F] flex items-center justify-center"
         >
           <HiOutlinePlus size={20} />
-          {open && <span className="ml-2">New Chat</span>}
+          {open && <span className="ml-2">New Question</span>}
         </button>
 
         {/* Chat List (only when open) */}
         {open &&
           chats.map((c) => (
             <div
-              key={c.id}
+              key={c._id}
               onClick={() => loadChat(c)}
               className="text-sm p-2 rounded truncate cursor-pointer text-gray-200 hover:bg-[#40414F]"
             >
-              {c.title}
+            {c.question.slice(0, 40)}
             </div>
           ))}
       </div>
@@ -51,7 +50,7 @@ export default function Sidebar({ open, setOpen, chats, newChat, loadChat }) {
       {/* FOOTER SECTION */}
       <div>
         <button
-          onClick={() => navigate("/AdminDashboard")}
+          onClick={() => navigate("/login")}
           className="w-full p-2 rounded hover:bg-[#40414F] flex items-center justify-center"
         >
           <HiOutlineUserCircle size={16} />

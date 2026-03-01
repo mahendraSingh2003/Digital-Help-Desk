@@ -1,6 +1,6 @@
 import MessageBubble from "./MessageBubble";
 
-export default function ChatArea({ messages, bottomRef }) {
+export default function ChatArea({ messages, bottomRef, activeQuestionId, questions }) {
 
   return (
     <div className="flex-1 overflow-y-auto px-6 pt-6 text-white">
@@ -14,7 +14,14 @@ export default function ChatArea({ messages, bottomRef }) {
       )}
 
       {messages.map((m, i) => (
-        <MessageBubble key={i} message={m} />
+        <MessageBubble
+          key={i}
+          message={m}
+          questionId={activeQuestionId}
+          questionText={
+            questions.find(q => q._id === activeQuestionId)?.question
+          }
+        />
       ))}
 
       <div ref={bottomRef} />

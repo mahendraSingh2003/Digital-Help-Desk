@@ -5,6 +5,22 @@ import ChatArea from "../components/HomeComponents/ChatArea";
 import ChatInput from "../components/HomeComponents/ChatInput";
 import API from "../api";
 
+// 🔥 DEMO DATA FOR TESTING
+const demoQuestions = [
+  {
+    _id: "1",
+    question: "What is React useRef used for?",
+    answer: "Not answered yet.",
+    status: "pending",
+  },
+  {
+    _id: "2",
+    question: "Explain JWT authentication flow",
+    answer: "JWT is used for stateless authentication between client and server.",
+    status: "ai_response",
+  },
+];
+
 export default function Home() {
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
@@ -13,8 +29,8 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
-  const [chats, setChats] = useState([]);
-  const [activeChat, setActiveChat] = useState(null);
+  const [questions, setQuestions] = useState(demoQuestions);
+  const [activeQuestionId, setActiveQuestionId] = useState(null);
 
   const bottomRef = useRef(null);
 
@@ -30,47 +46,69 @@ export default function Home() {
     text.split(" ").slice(0, 5).join(" ");
 
   const newChat = () => {
+    setActiveQuestionId(null);
     setMessages([]);
-    setActiveChat(null);
   };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const text = input;     // capture current input
-    setInput("");          // clear UI instantly
+    const text = input;
+    setInput("");
 
-    let chatId = activeChat;
+    // 🔥 Every new input = NEW QUESTION
+    const newQuestion = {
+      _id: Date.now().toString(), // unique id
+      question: text,
+      answer: "Not answered yet.",
+      status: "pending",
+    };
 
-    if (!chatId) {
-      chatId = Date.now();
-      setChats(p => [{ id: chatId, title: makeTitle(text), messages: [] }, ...p]);
-      setActiveChat(chatId);
-    }
+    setQuestions(prev => [newQuestion, ...prev]);
+    setActiveQuestionId(newQuestion._id);
 
-    const userMsg = { role: "user", content: text };
-    setMessages(p => [...p, userMsg]);
+    // Show only 1 Question + 1 Answer in ChatArea
+    setMessages([
+      { role: "user", content: text }
+    ]);
 
     try {
-      const res = await API.post("/api/chat", { message: text });
+      // 🔥 BACKEND CALL (AI)
+      // const res = await API.post("/ask", {
+      //   question: text,
+      // });
 
-      const bot = {
+      const aiReply = "Backend response here.";
+
+      const botMessage = {
         role: "assistant",
-        content: res.data.reply || "Backend response here."
+        content: aiReply,
       };
 
-      setMessages(p => [...p, bot]);
+      setMessages(prev => [...prev, botMessage]);
 
-      setChats(prev =>
-        prev.map(c =>
-          c.id === chatId
-            ? { ...c, messages: [...c.messages, userMsg, bot] }
-            : c
+      // 🔥 Update question object with AI response
+      setQuestions(prev =>
+        prev.map(q =>
+          q._id === newQuestion._id
+            ? { ...q, answer: aiReply, status: "ai_response" }
+            : q
         )
       );
 
+      // 🔥 OPTIONAL: SAVE TO DATABASE
+      // await API.post("/api/questions", {
+      //   ...newQuestion,
+      //   answer: aiReply,
+      //   status: "ai_response"
+      // });
+
     } catch {
-      setMessages(p => [...p, { role: "assistant", content: "⚠ Backend not connected yet." }]);
+      // If AI quota full or error
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: "⚠ AI quota full. Please ask human." }
+      ]);
     }
   };
 
@@ -81,11 +119,21 @@ export default function Home() {
       <Sidebar
         open={sidebarOpen}
         setOpen={setSidebarOpen}
-        chats={chats}
+        chats={questions}
         newChat={newChat}
-        loadChat={(c) => {
-          setActiveChat(c.id);
-          setMessages(c.messages);
+        loadChat={(q) => {
+          setActiveQuestionId(q._id);
+
+          setMessages([
+            { role: "user", content: q.question },
+            {
+              role: "assistant",
+              content:
+                q.status === "ai_response"
+                  ? q.answer
+                  : "Not answered yet.",
+            },
+          ]);
         }}
       />
 
@@ -93,7 +141,12 @@ export default function Home() {
 
         <Header theme={theme} setTheme={setTheme} />
 
-        <ChatArea messages={messages} bottomRef={bottomRef} />
+        <ChatArea
+          messages={messages}
+          bottomRef={bottomRef}
+          activeQuestionId={activeQuestionId}
+          questions={questions}
+        />
 
         <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} />
 
