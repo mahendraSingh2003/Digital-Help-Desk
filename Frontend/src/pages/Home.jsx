@@ -74,11 +74,14 @@ export default function Home() {
 
     try {
       // 🔥 BACKEND CALL (AI)
-      // const res = await API.post("/ask", {
-      //   question: text,
-      // });
+      console.log(text)
+      const res = await API.post("/ask", {
+        text: text,
+        user_id: 1
+      });
+      console.log(res)
 
-      const aiReply = "Backend response here.";
+      const aiReply = res.data.answer;
 
       const botMessage = {
         role: "assistant",

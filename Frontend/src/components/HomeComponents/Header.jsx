@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 
 export default function Header({ theme, setTheme }) {
 
@@ -7,11 +9,46 @@ export default function Header({ theme, setTheme }) {
 
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [user, setUser] = useState(null); // 🔥 store logged user
+
+  // ✅ Check if already logged in
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  // ✅ Handle Google Login Success
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        "http://localhost:8000/auth/google-login",
+        { token: credentialResponse.credential }
+      );
+
+      // Save YOUR backend JWT
+      localStorage.setItem("access_token", res.data.access_token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));  // ✅ ADD THIS
+      setUser(res.data.user);
+
+    } catch (err) {
+      console.log("Login failed");
+    }
+  };
+
+  // ✅ Logout
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");   // ✅ ADD THIS
+    setUser(null);
+    navigate("/");
+  };
 
   return (
     <div className="flex justify-between p-4 border-b border-gray-700 relative">
 
-      {/* TITLE */}
       <div className="text-lg font-semibold text-white">
         Digital Help Desk
       </div>
@@ -27,34 +64,79 @@ export default function Header({ theme, setTheme }) {
           }}
           onMouseLeave={() => setShowProfile(false)}
         >
-          <div className="bg-[#40414F] px-3 py-1 rounded cursor-pointer text-white">
-            👤
-          </div>
 
-          {showProfile && (
-            <div className="absolute right-0 top-full pt-2 z-50">
-              <div className="bg-[#40414F] p-3 rounded space-y-1 min-w-[150px] text-white shadow-lg">
+          {/* 🔥 IF NOT LOGGED IN → SHOW GOOGLE LOGIN */}
+          {!user ? (
+            <div className="bg-[#40414F] px-3 py-1 rounded">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => console.log("Login Failed")}
+                size="small"
+              />
+            </div>
+          ) : (
+            /* 🔥 IF LOGGED IN → SHOW PROFILE IMAGE */
+            <img
+              src={user.picture}
+              alt="profile"
+              className="w-10 h-10 rounded-full cursor-pointer border-2 border-white/20 hover:border-green-400 transition"
+            />
+          )}
 
-                <div
-                  onClick={() => navigate("/profile")}
-                  className="cursor-pointer hover:text-green-400"
-                >
-                  Profile
+          {/* 🔥 DROPDOWN IF LOGGED IN */}
+          {showProfile && user && (
+            <div className="absolute right-0 top-full pt-3 z-50">
+              <div className="w-72 bg-[#2F3136] rounded-2xl shadow-2xl border border-white/10 overflow-hidden animate-fadeIn">
+
+                {/* 🔥 Profile Header */}
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-500/10 to-transparent">
+                  <img
+                    src={user.picture}
+                    alt="profile"
+                    className="w-14 h-14 rounded-full border-2 border-green-400"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-white font-semibold text-sm">
+                      {user.username}
+                    </span>
+                    <span className="text-gray-400 text-xs break-all">
+                      {user.email}
+                    </span>
+                  </div>
                 </div>
 
-                <div>Email</div>
-                <div>Daily Limit</div>
+                {/* Divider */}
+                <div className="border-t border-white/10" />
 
-                <div className="cursor-pointer hover:text-red-400">
-                  Logout
+                {/* Info Section */}
+                <div className="p-4 space-y-3 text-sm">
+
+                  <div className="flex justify-between text-gray-400">
+                    <span>Daily Limit</span>
+                    <span className="text-green-400 font-medium">10</span>
+                  </div>
+
+                  <div
+                    onClick={() => navigate("/profile")}
+                    className="cursor-pointer px-3 py-2 rounded-lg hover:bg-white/5 transition text-gray-300 hover:text-green-400"
+                  >
+                    View Profile
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full mt-2 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-500 transition font-medium"
+                  >
+                    Logout
+                  </button>
+
                 </div>
-
               </div>
             </div>
           )}
         </div>
 
-        {/* SETTINGS */}
+        {/* SETTINGS (UNCHANGED) */}
         <div
           className="relative"
           onMouseEnter={() => {
