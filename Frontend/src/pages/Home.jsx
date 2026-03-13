@@ -5,21 +5,7 @@ import ChatArea from "../components/HomeComponents/ChatArea";
 import ChatInput from "../components/HomeComponents/ChatInput";
 import API from "../api";
 
-// 🔥 DEMO DATA FOR TESTING
-const demoQuestions = [
-  {
-    _id: "1",
-    question: "What is React useRef used for?",
-    answer: "Not answered yet.",
-    status: "pending",
-  },
-  {
-    _id: "2",
-    question: "Explain JWT authentication flow",
-    answer: "JWT is used for stateless authentication between client and server.",
-    status: "ai_response",
-  },
-];
+const GUEST_LIMIT = 3;
 
 export default function Home() {
 
@@ -29,7 +15,7 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
-  const [questions, setQuestions] = useState(demoQuestions);
+  const [questions, setQuestions] = useState([]);
   const [activeQuestionId, setActiveQuestionId] = useState(null);
 
   const bottomRef = useRef(null);
@@ -42,100 +28,129 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const makeTitle = (text) =>
-    text.split(" ").slice(0, 5).join(" ");
-
   const newChat = () => {
     setActiveQuestionId(null);
     setMessages([]);
   };
 
+  // guest question count
+  const getGuestCount = () =>
+    parseInt(localStorage.getItem("guest_questions") || "0", 10);
+
+  const increaseGuestCount = () =>
+    localStorage.setItem("guest_questions", getGuestCount() + 1);
+
   const sendMessage = async () => {
+
     if (!input.trim()) return;
+
+    const token = localStorage.getItem("token");
+    const loggedIn = !!token;
+
+    // guest limit check
+    if (!loggedIn && getGuestCount() >= GUEST_LIMIT) {
+
+      setMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "🔒 Free limit reached. Please login to continue."
+        }
+      ]);
+
+      return;
+    }
 
     const text = input;
     setInput("");
 
-    // 🔥 Every new input = NEW QUESTION
-    const newQuestion = {
-      _id: Date.now().toString(), // unique id
-      question: text,
-      answer: "Not answered yet.",
-      status: "pending",
-    };
+    const qid = Date.now().toString();
 
-    setQuestions(prev => [newQuestion, ...prev]);
-    setActiveQuestionId(newQuestion._id);
+    setMessages([{ role: "user", content: text }]);
 
-    // Show only 1 Question + 1 Answer in ChatArea
-    setMessages([
-      { role: "user", content: text }
+    setQuestions(prev => [
+      { _id: qid, question: text, answer: "", status: "pending" },
+      ...prev
     ]);
 
+    setActiveQuestionId(qid);
+
     try {
-      // 🔥 BACKEND CALL (AI)
-      console.log(text)
-      const res = await API.post("/ask", {
-        text: text,
-        user_id: 1
-      });
-      console.log(res)
 
-      const aiReply = res.data.answer;
+      const res = await API.post("/ask", { text, user_id: 1 });
 
-      const botMessage = {
-        role: "assistant",
-        content: aiReply,
-      };
+      const answer = res.data.answer;
 
-      setMessages(prev => [...prev, botMessage]);
+      // increase guest usage ONLY after success
+      if (!loggedIn) increaseGuestCount();
 
-      // 🔥 Update question object with AI response
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: answer }
+      ]);
+
       setQuestions(prev =>
         prev.map(q =>
-          q._id === newQuestion._id
-            ? { ...q, answer: aiReply, status: "ai_response" }
+          q._id === qid
+            ? { ...q, answer: answer, status: "ai_response" }
             : q
         )
       );
 
-      // 🔥 OPTIONAL: SAVE TO DATABASE
-      // await API.post("/api/questions", {
-      //   ...newQuestion,
-      //   answer: aiReply,
-      //   status: "ai_response"
-      // });
-
     } catch {
-      // If AI quota full or error
+
       setMessages(prev => [
         ...prev,
-        { role: "assistant", content: "⚠ AI quota full. Please ask human." }
+        { role: "assistant", content: "⚠ Server error. Try again." }
       ]);
+
     }
   };
+  const deleteChat = (id) => {
+    setQuestions(prev => {
+      const updated = prev.filter(q => q._id !== id);
 
+      // if deleted question was active
+      if (activeQuestionId === id) {
 
+        if (updated.length > 0) {
+          const next = updated[0];
+
+          setActiveQuestionId(next._id);
+
+          setMessages([
+            { role: "user", content: next.question },
+            { role: "assistant", content: next.answer }
+          ]);
+
+        } else {
+
+          setActiveQuestionId(null);
+          setMessages([]);
+
+        }
+      }
+
+      return updated;
+    });
+  };
   return (
-    <div className="h-screen flex overflow-hidden" style={{ background: theme === "dark" ? "#303030" : "#c5ccdb" }}>
+    <div
+      className="h-screen flex overflow-hidden"
+      style={{ background: theme === "dark" ? "#303030" : "#c5ccdb" }}
+    >
 
       <Sidebar
         open={sidebarOpen}
         setOpen={setSidebarOpen}
         chats={questions}
         newChat={newChat}
+        deleteChat={deleteChat}
         loadChat={(q) => {
           setActiveQuestionId(q._id);
-
           setMessages([
             { role: "user", content: q.question },
-            {
-              role: "assistant",
-              content:
-                q.status === "ai_response"
-                  ? q.answer
-                  : "Not answered yet.",
-            },
+            { role: "assistant", content: q.answer || "Not answered yet." }
           ]);
         }}
       />
@@ -151,7 +166,11 @@ export default function Home() {
           questions={questions}
         />
 
-        <ChatInput input={input} setInput={setInput} sendMessage={sendMessage} />
+        <ChatInput
+          input={input}
+          setInput={setInput}
+          sendMessage={sendMessage}
+        />
 
       </div>
     </div>

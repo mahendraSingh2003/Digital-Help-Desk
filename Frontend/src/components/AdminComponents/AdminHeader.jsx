@@ -1,23 +1,29 @@
-import { useState } from "react";
+import { useState ,useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  HiOutlineUserCircle
+} from "react-icons/hi2";
 
 export default function AdminHeader({ theme, setTheme }) {
   const navigate = useNavigate();
 
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [user, setUser] = useState(null);
 
-  // demo admin info (replace with real data if needed)
-  const adminName = "Admin";
-  const adminEmail = "admin@gmail.com";
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   // LOGOUT FUNCTION
   const handleLogout = () => {
     localStorage.removeItem("token"); // remove auth token
     localStorage.removeItem("admin"); // optional
-
-    setShowProfile(false);
-
+    setUser(null);
     navigate("/login"); // redirect to login page
   };
 
@@ -40,34 +46,71 @@ export default function AdminHeader({ theme, setTheme }) {
           }}
           onMouseLeave={() => setShowProfile(false)}
         >
-          <div className="bg-[#40414F] px-3 py-1 rounded cursor-pointer text-white">
-            👤
-          </div>
 
-          {showProfile && (
-            <div className="absolute right-0 top-full pt-2 z-50">
-              <div className="bg-[#40414F] p-3 rounded min-w-[200px] text-white shadow-lg space-y-2">
+          {/* 🔥 IF NOT LOGGED IN → SHOW GOOGLE LOGIN */}
+          {!user ? (
+            <div>
+              <button
+                onClick={() => navigate("/login")}
+                className="w-full p-2 rounded hover:bg-[#40414F] flex items-center justify-center text-white"
+              >
+                <HiOutlineUserCircle size={16} />
+                {open && <span className="ml-2 ">Sign In</span>}
+              </button>
+            </div>
 
-                {/* ADMIN NAME */}
-                <div className="font-semibold text-sm">
-                  {adminName}
+          ) : (
+            /* 🔥 IF LOGGED IN → SHOW PROFILE IMAGE */
+            <img
+              src={user.picture}
+              alt="profile"
+              className="w-10 h-10 rounded-full cursor-pointer border-2 border-white/20 hover:border-green-400 transition"
+            />
+          )}
+
+          {/* 🔥 DROPDOWN IF LOGGED IN */}
+          {showProfile && user && (
+            <div className="absolute right-0 top-full pt-3 z-50">
+              <div className="w-72 bg-[#2F3136] rounded-2xl shadow-2xl border border-white/10 overflow-hidden animate-fadeIn">
+
+                {/* 🔥 Profile Header */}
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-500/10 to-transparent">
+                  <img
+                    src={user.picture}
+                    alt="profile"
+                    className="w-14 h-14 rounded-full border-2 border-green-400"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-white font-semibold text-sm">
+                      {user.username}
+                    </span>
+                    <span className="text-gray-400 text-xs break-all">
+                      {user.email}
+                    </span>
+                  </div>
                 </div>
 
-                {/* EMAIL */}
-                <div className="text-xs text-gray-300">
-                  {adminEmail}
+                {/* Divider */}
+                <div className="border-t border-white/10" />
+
+                {/* Info Section */}
+                <div className="p-4 space-y-3 text-sm">
+
+                  <div
+                    onClick={() => navigate("/profile")}
+                    className="cursor-pointer px-3 py-2 rounded-lg hover:bg-white/5 transition text-gray-300 hover:text-green-400"
+                  >
+                    View Profile
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full mt-2 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-500 transition font-medium"
+                  >
+                    Logout
+                  </button>
+
                 </div>
-
-                <hr className="border-gray-600" />
-
-                {/* LOGOUT BUTTON */}
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left text-red-400 hover:text-red-500"
-                >
-                  Logout
-                </button>
-
               </div>
             </div>
           )}

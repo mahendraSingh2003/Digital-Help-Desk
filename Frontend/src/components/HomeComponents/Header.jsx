@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import {
+  HiOutlineUserCircle
+} from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
-import axios from "axios";
+
 
 export default function Header({ theme, setTheme }) {
 
@@ -20,23 +22,7 @@ export default function Header({ theme, setTheme }) {
     }
   }, []);
 
-  // ✅ Handle Google Login Success
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const res = await axios.post(
-        "http://localhost:8000/auth/google-login",
-        { token: credentialResponse.credential }
-      );
-
-      // Save YOUR backend JWT
-      localStorage.setItem("access_token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));  // ✅ ADD THIS
-      setUser(res.data.user);
-
-    } catch (err) {
-      console.log("Login failed");
-    }
-  };
+ 
 
   // ✅ Logout
   const handleLogout = () => {
@@ -56,6 +42,8 @@ export default function Header({ theme, setTheme }) {
       <div className="flex gap-4">
 
         {/* PROFILE */}
+
+
         <div
           className="relative"
           onMouseEnter={() => {
@@ -67,13 +55,16 @@ export default function Header({ theme, setTheme }) {
 
           {/* 🔥 IF NOT LOGGED IN → SHOW GOOGLE LOGIN */}
           {!user ? (
-            <div className="bg-[#40414F] px-3 py-1 rounded">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => console.log("Login Failed")}
-                size="small"
-              />
+            <div>
+              <button
+                onClick={() => navigate("/login")}
+                className="w-full p-2 rounded hover:bg-[#40414F] flex items-center justify-center text-white"
+              >
+                <HiOutlineUserCircle size={16} />
+                {open && <span className="ml-2 ">Sign In</span>}
+              </button>
             </div>
+
           ) : (
             /* 🔥 IF LOGGED IN → SHOW PROFILE IMAGE */
             <img
